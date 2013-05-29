@@ -127,7 +127,7 @@ entries = for key, obj of entryMap
   obj.title = obj.title or key
   obj.name = obj.name or toUrl key
   if isServer
-    obj.imgtype = if fs.existsSync "#{__dirname}/images/#{obj.name}.jpg" then "jpg" else "png"
+    obj.imgtype = if (require "fs").existsSync "#{__dirname}/images/#{obj.name}.jpg" then "jpg" else "png"
   console.log obj, "missing date" if not obj.date
   entryMap[obj.name] = obj
 entries.sort (a, b) -> if a.date < b.date then 1 else -1
@@ -155,6 +155,38 @@ fs.writeFileSync __dirname + "/index.html", genHTML(), "utf8" if isServer
 # process combile main.coffee
 #console.log genHTML()
 
+hexHeight = Math.sqrt(3)/2
+hexPos = (x, y) ->
+  x -= 0.5 if y & 1
+  return [x + .5, y*hexHeight ]
+ 
+if not isServer
+  width = window.innerWidth
+  height = window.innerHeight
+
+hexLayout = (nodes) ->
+  console.log nodes
+  nwidth = Math.floor(Math.sqrt(nodes.length * width / height * hexHeight))
+  nrows = Math.ceil(nodes.length / (nwidth + .5))
+  maxsize = Math.min(width/nwidth, height/nrows)
+
+  margin = maxsize * .1
+  size = maxsize * .8
+  n = 0
+  x = 0
+  y = 0
+  for node in nodes
+    [x0, y0] = hexPos x,y
+    console.log x0, y0
+    node.elem.style.left = "#{x0*(size+2*margin)+margin}px"
+    node.elem.style.top = "#{y0*(size+2*margin)+margin}px"
+    node.elem.style.width = "#{size}px"
+    node.elem.style.height = "#{size}px"
+    ++x
+    if x >= nwidth + (y & 1)
+      ++y
+      x = 0
+
 this.main = ->
   for elem in document.getElementsByClassName "entry"
     img = elem.children[0]
@@ -162,8 +194,8 @@ this.main = ->
     entryMap[elem.id].img = img
     elemstyle = elem.style
     elemstyle.position = "absolute"
-    elemstyle.width = "100px"
-    elemstyle.height = "100px"
+    elemstyle.width = "10px"
+    elemstyle.height = "10px"
     elemstyle.borderRadius = "50px"
     elemstyle.boxShadow = "2px 2px 5px rgba(0,0,0,.2)"
     elemstyle.overflow = "hidden"
@@ -181,3 +213,4 @@ this.main = ->
     bodystyle.transition = "all 10s"
     setTimeout animateBackground, 10000
   animateBackground()
+  hexLayout(entries)

@@ -6,9 +6,11 @@ New version in progress.
 
 Initial version:
 
-- render circles from data
+- √render circles from data
+- √color changing background
+- class for content-circle
+    - moveTo(x,y,size,transition)
 - click for more info
-- color changing background
 - missing content images
     - pricing-scale
     - productivity-hacks
@@ -16,6 +18,9 @@ Initial version:
     - blobshot
     - presentation-evaluation-notes
     - skrivetips
+- layouts
+    - chronological hex
+    - one-in-focus + border
 
 Future versions:
 
