@@ -114,6 +114,32 @@ entryMap =
   # Rasmus Erik
   # CV
 
+Entry = (obj) ->
+  for key, val of obj
+    console.log key, val
+    this[key] = val
+  this
+
+Entry.prototype.moveTo = (x,y,size,delay) ->
+  size = @size if not size
+  delay = @delay if not delay
+  style = @elem.style
+  setPos = ->
+    style.left = x + "px"
+    style.top = y + "px"
+  if @size isnt size
+    style.width = style.height = size + "px"
+    style.borderRadius = size/2 + "px"
+    @size = size
+  [@x, @y] = [x, y]
+  if @delay isnt delay
+    style.webkitTransition = "all #{delay}ms"
+    style.transition = "all #{delay}ms"
+    @delay = delay
+    setTimeout setPos, 0
+  else
+    setPos()
+
 isServer = if typeof process is "object" then true else false
 
 if isServer
@@ -123,7 +149,10 @@ toUrl = (str) ->
   str = str.toLowerCase()
   str.replace /[^a-zA-Z0-9]/g, "-"
 
-entries = for key, obj of entryMap
+entries = for key, val of entryMap
+  obj = new Entry(val)
+  console.log "U", obj, val
+  entryMap[key] = obj
   obj.title = obj.title or key
   obj.name = obj.name or toUrl key
   if isServer
@@ -137,7 +166,6 @@ if isServer
 entryHTML = (entry) ->
   "<span id=#{entry.name} class=entry>" +
     "<img src=\"images/#{entry.name}.#{entry.imgtype}\">" +
-    "<h1>obj.name</h1>" +
   "</span>"
 
 genHTML = ->
@@ -160,9 +188,13 @@ hexPos = (x, y) ->
   x -= 0.5 if y & 1
   return [x + .5, y*hexHeight ]
  
-if not isServer
+width = height = 0
+updateDim = ->
   width = window.innerWidth
   height = window.innerHeight
+
+updateDim() if not isServer
+  
 
 hexLayout = (nodes) ->
   console.log nodes
@@ -170,8 +202,8 @@ hexLayout = (nodes) ->
   nrows = Math.ceil(nodes.length / (nwidth + .5))
   maxsize = Math.min(width/nwidth, height/nrows)
 
-  margin = maxsize * .1
-  size = maxsize * .8
+  margin = maxsize * .05
+  size = maxsize * .9
   n = 0
   x = 0
   y = 0
@@ -182,10 +214,19 @@ hexLayout = (nodes) ->
     node.elem.style.top = "#{y0*(size+2*margin)+margin}px"
     node.elem.style.width = "#{size}px"
     node.elem.style.height = "#{size}px"
+    x0 = x0*(size+2*margin)+margin
+    y0 = y0*(size+2*margin)+margin
+    console.log "X", node
+    node.moveTo(x0,y0,size)
     ++x
     if x >= nwidth + (y & 1)
       ++y
       x = 0
+
+borderLayout = (nodes) ->
+  size = Math.min(Math.ceil(2*(width+height)/(nodes.length+8)), width * .2, height * .2)
+  for node in nodes
+    node.moveTo(node.x, node.y, size * 0.8, 3000)
 
 this.main = ->
   for elem in document.getElementsByClassName "entry"
@@ -197,20 +238,34 @@ this.main = ->
     elemstyle.width = "10px"
     elemstyle.height = "10px"
     elemstyle.borderRadius = "50px"
-    elemstyle.boxShadow = "2px 2px 5px rgba(0,0,0,.2)"
-    elemstyle.overflow = "hidden"
+    elemstyle.boxShadow = "4px 4px 8px rgba(0,0,0,0.6) inset"
+    elemstyle.border = "1px solid rgba(255,255,255,0.3)"
     elemstyle.top = Math.random() * 400 + "px"
     elemstyle.left = Math.random() * 400 + "px"
     imgstyle = img.style
+    imgstyle.borderRadius = "1000px"
+    imgstyle.position = "absolute"
+    imgstyle.zIndex = "-1"
     imgstyle.width = "100%"
     imgstyle.height = "100%"
 
+  bgColor = [200 + Math.random() * 55, 200 + Math.random() * 55, 200 + Math.random() * 55]
   animateBackground = ->
-    col = -> Math.floor 210 + Math.random() * 45
-    bodystyle = document.body.style
-    bodystyle.backgroundColor = "rgb(#{[col(),col(),col()]})"
-    bodystyle.webkitTransition = "all 10s"
-    bodystyle.transition = "all 10s"
-    setTimeout animateBackground, 10000
+    bgColor[0] = Math.round(Math.min(255, Math.max(0, bgColor[0] + 6*Math.random() - 3)))
+    bgColor[1] = Math.round(Math.min(255, Math.max(0, bgColor[1] + 6*Math.random() - 3)))
+    bgColor[2] = Math.round(Math.min(255, Math.max(0, bgColor[2] + 6*Math.random() - 3)))
+    document.body.style.backgroundColor = "rgb("+bgColor+")"
+    #col = -> Math.floor 0 + Math.random() * 255
+    #bodystyle = document.body.style
+    #bodystyle.backgroundColor = "rgb(#{[col(),col(),col()]})"
+    #bodystyle.webkitTransition = "all 30s"
+    #bodystyle.transition = "all 30s"
+    #setTimeout animateBackground, 1000
   animateBackground()
   hexLayout(entries)
+  setTimeout (->borderLayout entries), 3000
+
+  window.onresize = -> 
+    updateDim()
+    hexLayout(entries)
+
